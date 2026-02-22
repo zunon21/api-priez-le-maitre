@@ -1,0 +1,28 @@
+{
+  "name": "api-priez-le-maitre",
+  "version": "1.0.0",
+  "description": "API pour l'application Priez le Maître - Gestion des sujets de prière",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "api",
+    "prayer",
+    "christian",
+    "mission"
+  ],
+  "author": "AMI Côte d'Ivoire",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
