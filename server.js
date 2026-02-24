@@ -13,7 +13,8 @@ app.use(express.json({ limit: '50mb' }));
 // CONNEXION À MONGODB ATLAS (CORRIGÉE)
 // ============================================
 
-const uri = "mongodb+srv://zunonserge10_db_user:JMtIPdocRXaMBmhj@cluster0.o5bnzzz.mongodb.net/priez-le-maitre?retryWrites=true&w=majority";
+// ✅ NOUVEL UTILISATEUR CRÉÉ DANS MONGODB ATLAS
+const uri = "mongodb+srv://utilisateur_api:Password123@cluster0.o5bnzzz.mongodb.net/priez-le-maitre?retryWrites=true&w=majority&authSource=admin";
 
 // OPTIONS CORRIGÉES POUR RENDER
 const client = new MongoClient(uri, {
@@ -22,7 +23,6 @@ const client = new MongoClient(uri, {
     tlsAllowInvalidHostnames: true,      // Essentiel pour Render
     serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 45000,
-    // autoSelectFamily: false,  // 👈 LIGNE SUPPRIMÉE (non supportée)
     retryWrites: true,
     retryReads: true
 });
