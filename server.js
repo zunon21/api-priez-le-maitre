@@ -1,12 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const app = express();
+const { MongoClient } = require('mongodb');
 
-// ============================================
-// IMPORTANT : Render fournit son propre PORT
-// ============================================
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -14,59 +10,34 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // ============================================
-// CONFIGURATION DU FICHIER DE DONNÉES
+// CONNEXION À MONGODB ATLAS
 // ============================================
 
-const dataFile = path.join(__dirname, 'data.json');
-const dataDir = path.dirname(dataFile);
+// 👇 REMPLACE PAR TA VRAIE CHAÎNE DE CONNEXION
+const uri = "mongodb+srv://zunonserge10_db_user:JMtIPdocRXaMBmhj@cluster0.o5bnzzz.mongodb.net/priez-le-maitre?retryWrites=true&w=majority";
+const client = new MongoClient(uri);
+let db;
 
-// Créer le dossier s'il n'existe pas
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-    console.log('📁 Dossier créé:', dataDir);
-}
-
-// Créer le fichier s'il n'existe pas
-if (!fs.existsSync(dataFile)) {
-    fs.writeFileSync(dataFile, JSON.stringify({ prayers: [] }, null, 2));
-    console.log('📁 Fichier data.json créé automatiquement');
-}
-
-// ============================================
-// FONCTIONS DE LECTURE/ÉCRITURE
-// ============================================
-
-function lireDonnees() {
+async function connectDB() {
     try {
-        const data = fs.readFileSync(dataFile, 'utf8');
-        const parsed = JSON.parse(data);
-        return parsed.prayers || [];
-    } catch (error) {
-        console.error('❌ Erreur lecture fichier:', error.message);
-        fs.writeFileSync(dataFile, JSON.stringify({ prayers: [] }, null, 2));
-        return [];
+        await client.connect();
+        db = client.db('priez-le-maitre');
+        console.log('✅ Connecté à MongoDB Atlas');
+    } catch (err) {
+        console.error('❌ Erreur de connexion MongoDB :', err);
+        process.exit(1);
     }
 }
-
-function sauvegarderDonnees(prayers) {
-    try {
-        fs.writeFileSync(dataFile, JSON.stringify({ prayers }, null, 2));
-        console.log('💾 Données sauvegardées');
-        return true;
-    } catch (error) {
-        console.error('❌ Erreur sauvegarde:', error.message);
-        return false;
-    }
-}
+connectDB();
 
 // ============================================
-// ROUTES API
+// ROUTES API (AVEC MONGODB)
 // ============================================
 
 // Récupérer tous les sujets
-app.get('/api/prayers', (req, res) => {
+app.get('/api/prayers', async (req, res) => {
     try {
-        const prayers = lireDonnees();
+        const prayers = await db.collection('prayers').find().toArray();
         console.log('📋 Récupération de tous les sujets - Total:', prayers.length);
         res.json(prayers);
     } catch (error) {
@@ -76,17 +47,16 @@ app.get('/api/prayers', (req, res) => {
 });
 
 // Récupérer le sujet du jour
-app.get('/api/prayers/today', (req, res) => {
+app.get('/api/prayers/today', async (req, res) => {
     try {
-        const prayers = lireDonnees();
         const today = new Date().toISOString().split('T')[0];
         console.log('🔍 Recherche du sujet pour:', today);
         
-        const todayPrayer = prayers.find(p => p.date === today);
+        const prayer = await db.collection('prayers').findOne({ date: today });
         
-        if (todayPrayer) {
-            console.log('✅ Sujet trouvé:', todayPrayer.title);
-            res.json(todayPrayer);
+        if (prayer) {
+            console.log('✅ Sujet trouvé:', prayer.title);
+            res.json(prayer);
         } else {
             console.log('❌ Aucun sujet pour aujourd\'hui');
             res.status(404).json({ message: "Aucun sujet pour aujourd'hui" });
@@ -98,9 +68,8 @@ app.get('/api/prayers/today', (req, res) => {
 });
 
 // Ajouter un sujet
-app.post('/api/prayers', (req, res) => {
+app.post('/api/prayers', async (req, res) => {
     try {
-        const prayers = lireDonnees();
         const newPrayer = req.body;
         
         if (!newPrayer.date || !newPrayer.title || !newPrayer.subject) {
@@ -109,13 +78,9 @@ app.post('/api/prayers', (req, res) => {
         
         console.log('➕ Ajout d\'un sujet:', newPrayer.date, '-', newPrayer.title);
         
-        prayers.push(newPrayer);
+        await db.collection('prayers').insertOne(newPrayer);
+        res.status(201).json(newPrayer);
         
-        if (sauvegarderDonnees(prayers)) {
-            res.status(201).json(newPrayer);
-        } else {
-            res.status(500).json({ message: "Erreur lors de la sauvegarde" });
-        }
     } catch (error) {
         console.error('❌ Erreur:', error.message);
         res.status(500).json({ message: "Erreur serveur" });
@@ -123,22 +88,19 @@ app.post('/api/prayers', (req, res) => {
 });
 
 // Incrémenter le compteur de prières
-app.post('/api/prayers/:date/pray', (req, res) => {
+app.post('/api/prayers/:date/pray', async (req, res) => {
     try {
-        const prayers = lireDonnees();
         const date = req.params.date;
         console.log('🙏 Prière enregistrée pour:', date);
         
-        const prayerIndex = prayers.findIndex(p => p.date === date);
+        const result = await db.collection('prayers').updateOne(
+            { date },
+            { $inc: { count: 1 } }
+        );
         
-        if (prayerIndex !== -1) {
-            prayers[prayerIndex].count = (prayers[prayerIndex].count || 0) + 1;
-            
-            if (sauvegarderDonnees(prayers)) {
-                res.json({ count: prayers[prayerIndex].count });
-            } else {
-                res.status(500).json({ message: "Erreur lors de la sauvegarde" });
-            }
+        if (result.modifiedCount > 0) {
+            const updated = await db.collection('prayers').findOne({ date });
+            res.json({ count: updated.count });
         } else {
             res.status(404).json({ message: "Sujet non trouvé" });
         }
@@ -148,34 +110,20 @@ app.post('/api/prayers/:date/pray', (req, res) => {
     }
 });
 
-// SUPPRIMER un sujet par sa date
-app.delete('/api/prayers/:date', (req, res) => {
+// Supprimer un sujet
+app.delete('/api/prayers/:date', async (req, res) => {
     try {
-        const prayers = lireDonnees();
         const date = req.params.date;
         console.log('🗑️ Tentative de suppression pour la date:', date);
         
-        const index = prayers.findIndex(p => p.date === date);
+        const result = await db.collection('prayers').deleteOne({ date });
         
-        if (index !== -1) {
-            const deleted = prayers[index];
-            prayers.splice(index, 1);
-            
-            if (sauvegarderDonnees(prayers)) {
-                console.log('✅ Sujet supprimé avec succès:', deleted.title);
-                res.status(200).json({ 
-                    message: "Sujet supprimé avec succès",
-                    deleted: deleted 
-                });
-            } else {
-                res.status(500).json({ message: "Erreur lors de la sauvegarde" });
-            }
+        if (result.deletedCount > 0) {
+            console.log('✅ Sujet supprimé avec succès');
+            res.status(200).json({ message: "Sujet supprimé avec succès" });
         } else {
             console.log('❌ Sujet non trouvé pour la date:', date);
-            res.status(404).json({ 
-                message: "Sujet non trouvé",
-                date: date 
-            });
+            res.status(404).json({ message: "Sujet non trouvé", date });
         }
     } catch (error) {
         console.error('❌ Erreur:', error.message);
@@ -188,5 +136,4 @@ app.delete('/api/prayers/:date', (req, res) => {
 // ============================================
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ API disponible sur le port ${PORT}`);
-    console.log(`📁 Données sauvegardées dans: ${dataFile}`);
 });
