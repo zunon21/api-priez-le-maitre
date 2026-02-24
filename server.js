@@ -13,8 +13,8 @@ app.use(express.json({ limit: '50mb' }));
 // CONNEXION À MONGODB ATLAS (CORRIGÉE)
 // ============================================
 
-// ✅ NOUVEL UTILISATEUR CRÉÉ DANS MONGODB ATLAS
-const uri = "mongodb+srv://utilisateur_api:Password123@cluster0.o5bnzzz.mongodb.net/priez-le-maitre?retryWrites=true&w=majority&authSource=admin";
+// ✅ DERNIÈRE CORRECTION : nom d'utilisateur = api_user (pas utilisateur_api)
+const uri = "mongodb+srv://api_user:Password123@cluster0.o5bnzzz.mongodb.net/priez-le-maitre?retryWrites=true&w=majority&authSource=admin";
 
 // OPTIONS CORRIGÉES POUR RENDER
 const client = new MongoClient(uri, {
