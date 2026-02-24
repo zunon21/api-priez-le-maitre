@@ -22,7 +22,7 @@ const client = new MongoClient(uri, {
     tlsAllowInvalidHostnames: true,      // Essentiel pour Render
     serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 45000,
-    autoSelectFamily: false,             // Corrige le bug SSL
+    // autoSelectFamily: false,  // 👈 LIGNE SUPPRIMÉE (non supportée)
     retryWrites: true,
     retryReads: true
 });
