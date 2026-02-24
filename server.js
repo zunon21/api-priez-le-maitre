@@ -31,6 +31,21 @@ async function connectDB() {
 connectDB();
 
 // ============================================
+// ✅ NOUVELLE ROUTE POUR LA RACINE DE L'API
+// ============================================
+app.get('/api', (req, res) => {
+    res.json({
+        message: "Bienvenue sur l'API de Priez le Maître.",
+        endpoints: [
+            "/api/prayers - Liste de tous les sujets",
+            "/api/prayers/today - Sujet du jour",
+            "/api/prayers/:date/pray - Pour prier (POST)",
+            "/api/prayers/:date - Pour supprimer (DELETE)"
+        ]
+    });
+});
+
+// ============================================
 // ROUTES API (AVEC MONGODB)
 // ============================================
 
